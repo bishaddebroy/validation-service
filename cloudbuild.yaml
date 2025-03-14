@@ -34,7 +34,7 @@ steps:
     - 'deployment/validation-service'
     env:
     - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
-    - 'CLOUDSDK_CONTAINER_CLUSTER=bishad-gke-cluster'
+    - 'CLOUDSDK_CONTAINER_CLUSTER=utsha-gke-cluster'
 
 # this section is to fix the service account permission newly added to gcp
 options:
