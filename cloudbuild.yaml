@@ -26,6 +26,16 @@ steps:
     - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
     - 'CLOUDSDK_CONTAINER_CLUSTER=utsha-gke-cluster'
 
+  # Force a rollout restart to ensure new image is used
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args:
+    - 'rollout'
+    - 'restart'
+    - 'deployment/validation-service'
+    env:
+    - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+    - 'CLOUDSDK_CONTAINER_CLUSTER=bishad-gke-cluster'
+
 # this section is to fix the service account permission newly added to gcp
 options:
   logging: CLOUD_LOGGING_ONLY
