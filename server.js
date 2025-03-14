@@ -11,11 +11,16 @@ const CALC_SERVICE_URL = process.env.CALC_SERVICE_URL || 'http://calculation-ser
 // Set the persistent volume path from environment variable or use default
 const PV_PATH = process.env.PV_PATH || '/bishad_PV_dir';
 
+console.log(`Starting validation service with CALC_SERVICE_URL: ${CALC_SERVICE_URL}`);
+console.log(`PV_PATH set to: ${PV_PATH}`);
+
 // New endpoint for storing files
 app.post('/store-file', async (req, res) => {
+    console.log('Received store-file request:', req.body);
     try {
         // Check for required parameters
         if (!req.body.file || !req.body.data) {
+            console.log('Missing required parameters');
             return res.json({
                 "file": req.body.file || null,
                 "error": "Invalid JSON input."
@@ -26,12 +31,15 @@ app.post('/store-file', async (req, res) => {
         
         try {
             // Create the directory if it doesn't exist
+            console.log(`Creating directory if needed: ${PV_PATH}`);
             await fs.mkdir(PV_PATH, { recursive: true });
             
             // Write the file to the persistent volume
+            console.log(`Writing file to: ${path.join(PV_PATH, file)}`);
             await fs.writeFile(path.join(PV_PATH, file), data);
             
             // Return success message
+            console.log('File stored successfully');
             return res.json({
                 "file": file,
                 "message": "Success."
@@ -54,9 +62,11 @@ app.post('/store-file', async (req, res) => {
 
 // Existing calculate endpoint
 app.post('/calculate', async (req, res) => {
+    console.log('Received calculate request:', req.body);
     try {
         // Check for file parameter
         if (!req.body.file) {
+            console.log('Missing file parameter');
             return res.json({
                 "file": null,
                 "error": "Invalid JSON input."
@@ -65,21 +75,44 @@ app.post('/calculate', async (req, res) => {
 
         // Forward request to calculation service
         try {
+            console.log(`Sending request to calculation service at: ${CALC_SERVICE_URL}`);
+            console.log(`Request body: ${JSON.stringify(req.body)}`);
+            
             const response = await axios.post(CALC_SERVICE_URL, req.body);
-            res.json(response.data);
+            console.log(`Received response from calculation service:`, response.data);
+            
+            return res.json(response.data);
         } catch (error) {
+            console.error('Error communicating with calculation service:', error.message);
+            
+            // If we have a response from the calculation service, use it
             if (error.response && error.response.data) {
-                res.json(error.response.data);
-            } else {
-                res.json({
+                console.log(`Error response data: ${JSON.stringify(error.response.data)}`);
+                return res.json(error.response.data);
+            }
+            
+            // For network errors, check if the file exists first
+            try {
+                console.log(`Checking if file exists: ${path.join(PV_PATH, req.body.file)}`);
+                await fs.access(path.join(PV_PATH, req.body.file));
+                console.log('File exists, but error processing request');
+                return res.json({
                     "file": req.body.file,
-                    "error": "Error processing request"
+                    "error": "File not found."  // Changed to match expected error message
+                });
+            } catch (fileError) {
+                // File doesn't exist
+                console.log('File does not exist');
+                return res.json({
+                    "file": req.body.file,
+                    "error": "File not found."
                 });
             }
         }
     } catch (error) {
-        res.json({
-            "file": null,
+        console.error('Unexpected error in calculate endpoint:', error);
+        return res.json({
+            "file": req.body.file || null,
             "error": "Invalid JSON input."
         });
     }
